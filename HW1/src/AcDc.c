@@ -79,7 +79,7 @@ Token getNumericToken( FILE *source, char c )
     return token;
 }
 
-Token scanner( FILE *source )
+Token scanner( FILE *source )// TODO: support variable name that not exceed 64 characters
 {
     char c;
     Token token;
