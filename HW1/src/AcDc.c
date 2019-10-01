@@ -15,6 +15,8 @@ Token temporaryToken = {.type = NullToken};//assigns value when scanned token un
 //       | Val
 
 // TODO: check divide-by-zero after constant folding 
+// Probable problem: precision
+
 
 int main( int argc, char *argv[] )
 {
