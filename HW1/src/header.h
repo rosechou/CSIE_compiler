@@ -14,7 +14,7 @@
 *******************************************************************************************************************************************/
 
 typedef enum TokenType { FloatDeclaration, IntegerDeclaration, PrintOp, AssignmentOp, PlusOp, MinusOp,
-             MulOp, DivOp, Alphabet, IntValue, FloatValue, EOFsymbol } TokenType;
+             MulOp, DivOp, Alphabet, IntValue, FloatValue, EOFsymbol, NullToken} TokenType;// GeniusPudding
 typedef enum DataType { Int, Float, Notype }DataType;
 typedef enum StmtType { Print, Assignment } StmtType;
 typedef enum ValueType { Identifier, IntConst, FloatConst, PlusNode, MinusNode, MulNode, DivNode, IntToFloatConvertNode } ValueType;
@@ -32,6 +32,14 @@ typedef struct Token{
     TokenType type;
     char tok[1025];
 }Token;
+
+
+// GeniusPudding, shiuld we run scanner once to get a token list?
+typedef struct TokenListNode{
+    Token tn;
+    struct TokenListNode *lastNode;
+    struct TokenListNode *nextNode;
+}TokenListNode;
 
 /*** The following are nodes of the AST. ***/
 
@@ -53,15 +61,16 @@ typedef struct Declarations{
 }Declarations;
 
 /* For the nodes of the expression on the right hand side of one assignment statement */
-typedef struct Value{
+typedef struct Value{// TODO: support id with at most 64 chars
     ValueType type;
     union{
         char id;                   /* if the node represent the access of the identifier */
-        Operation op;              /* store +, -, *, /, =, type_convert */
+        Operation op;              /* store +, -, *, /, =, type_convert */ 
         int ivalue;                /* for integer constant in the expression */
         float fvalue;              /* for float constant */
     }val;
-}Value;
+    struct Value *nextInProduct; // GeniusPudding, for the Product(non-terminal) 
+}Value;//Question: op matches ValueType, then why we need op???
 
 
 /* 
@@ -142,5 +151,6 @@ void gencode( Program prog, FILE * target );
 
 void print_expr( Expression *expr );
 void test_parser( FILE *source );
-
+void CheckProductInValue( FILE *source, Expression *value );// GeniusPudding
+void fprint_product( FILE *target, Value tailProduct);// GeniusPudding 
 #endif // HEADER_H_INCLUDED

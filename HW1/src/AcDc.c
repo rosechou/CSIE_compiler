@@ -4,6 +4,17 @@
 #include <string.h>
 #include "header.h"
 
+// GeniusPudding
+Token temporaryToken = {.type = NullToken};//assigns value when scanned token unused  
+// Add CFGs:
+// Stmt -> id assign Prod Expr
+// Expr -> plus Prod Expr
+//       | minus Prod Expr
+// Prod -> Val multiple Prod
+//       | Val divide Prod
+//       | Val
+
+// TODO: check divide-by-zero after constant folding 
 
 int main( int argc, char *argv[] )
 {
@@ -81,8 +92,21 @@ Token getNumericToken( FILE *source, char c )
 
 Token scanner( FILE *source )// TODO: support variable name that not exceed 64 characters
 {
+
+
+
+
     char c;
     Token token;
+
+    // GeniusPudding   
+    if (temporaryToken.type != NullToken){
+        printf("Token temporary is not empty!\n");
+        token = temporaryToken;
+        temporaryToken.type = NullToken;
+        return token;
+    }
+
 
     while( !feof(source) ){
         c = fgetc(source);
@@ -193,7 +217,7 @@ Expression *parseValue( FILE *source )
     switch(token.type){
         case Alphabet:
             (value->v).type = Identifier;
-            (value->v).val.id = token.tok[0];
+            (value->v).val.id = token.tok[0];// TODO: wont be only 1 char
             break;
         case IntValue:
             (value->v).type = IntConst;
@@ -208,7 +232,46 @@ Expression *parseValue( FILE *source )
             exit(1);
     }
 
+    CheckProductInValue(source, value);// GeniusPudding
+
     return value;
+}
+
+// GeniusPudding
+void CheckProductInValue( FILE *source, Expression *value )
+{
+    // guess next operator 
+    Token operatorToken, valueToken;
+
+    operatorToken = scanner(source);
+    printf("DEBUG: operatorToken.type=%d, operatorToken.tok=%s\n",operatorToken.type,operatorToken.tok);
+    Value *operator = (Value *)malloc( sizeof(Value) );// only care about the Value type
+    switch(operatorToken.type){
+        case MulOp:
+        case DivOp:
+            
+            (value->v).nextInProduct = operator;// all Product content listed in only An Expression: value
+
+            Expression *tailValue = parseValue(source);// recursion for tail 
+            operator->nextInProduct = &(tailValue->v);
+
+            if(operatorToken.type == MulOp){
+                operator->type = MulNode;
+                (operator->val).op = Mul;
+            }else{//DivOp, check divide by 0 here 
+                if((operator->nextInProduct->type==IntConst&&(operator->nextInProduct->val).ivalue==0)||(operator->nextInProduct->type==FloatConst&&(operator->nextInProduct->val).fvalue==0.0)){
+                    printf("Divide by 0!\n");
+                    exit(1);                    
+                }
+
+                operator->type = DivNode;
+                (operator->val).op = Div;
+            } 
+            break;            
+        default:
+            temporaryToken = operatorToken;
+    }
+    return; 
 }
 
 Expression *parseExpressionTail( FILE *source, Expression *lvalue )
@@ -279,17 +342,22 @@ Statement parseStatement( FILE *source, Token token )
 {
     Token next_token;
     Expression *value, *expr;
-
+    printf("parseStatement token.type:%d, token.tok:%s\n",(int)token.type,token.tok);
     switch(token.type){
         case Alphabet:
             next_token = scanner(source);
+            printf("parseStatement next_token.type:%d, next_token.tok:%s\n",(int)next_token.type,next_token.tok);
             if(next_token.type == AssignmentOp){
                 value = parseValue(source);
                 expr = parseExpression(source, value);
-                return makeAssignmentNode(token.tok[0], value, expr);
+                if (expr != NULL)
+                    printf("value:%d,expr:%d\n",(int)(value->v).type, (int)(expr->v).type);
+                else
+                    printf("value:%d\n",(int)(value->v).type);
+                return makeAssignmentNode(token.tok[0], value, expr);// TODO: wont be only 1 char
             }
             else{
-                printf("Syntax Error: Expect an assignment op %s\n", next_token.tok);
+                printf("Syntax Error: Expect an assignment op %s\n", next_token.tok);//Syntax Error description has Syntax Error?
                 exit(1);
             }
         case PrintOp:
@@ -361,7 +429,7 @@ Declarations *makeDeclarationTree( Declaration decl, Declarations *decls )
 }
 
 
-Statement makeAssignmentNode( char id, Expression *v, Expression *expr_tail )
+Statement makeAssignmentNode( char id, Expression *v, Expression *expr_tail )// TODO: wont be only 1 char
 {
     Statement stmt;
     AssignmentStatement assign;
@@ -486,7 +554,7 @@ DataType generalize( Expression *left, Expression *right )
     return Int;
 }
 
-DataType lookup_table( SymbolTable *table, char c )
+DataType lookup_table( SymbolTable *table, char c )// TODO: support variable length of identifier's name
 {
     int id = c-'a';
     if( table->table[id] != Int && table->table[id] != Float)
@@ -573,13 +641,20 @@ void fprint_op( FILE *target, ValueType op )
         case PlusNode:
             fprintf(target,"+\n");
             break;
+        // GeniusPudding
+        case MulNode:
+            fprintf(target,"*\n");
+            break;
+        case DivNode:
+            fprintf(target,"/\n");
+            break;
         default:
             fprintf(target,"Error in fprintf_op ValueType = %d\n",op);
             break;
     }
 }
 
-void fprint_expr( FILE *target, Expression *expr)
+void fprint_expr( FILE *target, Expression *expr)// TODO: fprint Values in Products
 {
 
     if(expr->leftOperand == NULL){
@@ -597,6 +672,9 @@ void fprint_expr( FILE *target, Expression *expr)
                 fprintf(target,"Error In fprint_left_expr. (expr->v).type=%d\n",(expr->v).type);
                 break;
         }
+
+        // GeniusPudding
+        fprint_product(target, (expr->v));
     }
     else{
         fprint_expr(target, expr->leftOperand);
@@ -609,6 +687,33 @@ void fprint_expr( FILE *target, Expression *expr)
             fprint_op(target, (expr->v).type);
         }
     }
+}
+
+// GeniusPudding
+void fprint_product( FILE *target, Value tailProduct)
+{
+    if(tailProduct.nextInProduct!=NULL && (tailProduct.nextInProduct->type==MulNode||tailProduct.nextInProduct->type==DivNode)){
+        Value *operator = tailProduct.nextInProduct;
+        tailProduct = *(operator->nextInProduct);//next value
+        switch( tailProduct.type ){
+            case Identifier:
+                fprintf(target,"l%c\n",tailProduct.val.id);
+                break;
+            case IntConst:
+                fprintf(target,"%d\n",tailProduct.val.ivalue);
+                break;
+            case FloatConst:
+                fprintf(target,"%f\n", tailProduct.val.fvalue);
+                break;
+            default:
+                fprintf(target,"Error In fprint_left_expr. (expr->v).type=%d\n",tailProduct.type);
+                break;
+        }
+        fprint_op(target, operator->type);
+        fprint_product(target, tailProduct); // recursive to gen stack language
+        
+    }
+    return;
 }
 
 void gencode(Program prog, FILE * target)
