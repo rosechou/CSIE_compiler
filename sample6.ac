@@ -1,0 +1,11 @@
+i abbc
+f b
+i abbc
+i d
+abbc = 1
+b = 2.1
+abbc = 2
+d = 2
+abbc = abbc + d
+p abbc
+p d
