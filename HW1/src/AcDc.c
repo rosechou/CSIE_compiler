@@ -242,6 +242,7 @@ Expression *parseValue( FILE *source )
 // GeniusPudding
 void CheckProductInValue( FILE *source, Expression *value )
 {
+    (value->v).nextInProduct = NULL;
     // guess next operator 
     Token operatorToken, valueToken;
 
@@ -586,6 +587,10 @@ void checkexpression( Expression * expr, SymbolTable * table )
             default:
                 break;
         }
+
+        // GeniusPudding, fold products here
+        
+
     }
     else{
         Expression *left = expr->leftOperand;
@@ -658,7 +663,7 @@ void fprint_op( FILE *target, ValueType op )
 
 void fprint_expr( FILE *target, Expression *expr)// TODO: fprint Values in Products
 {
-
+    printf("fprinting:%d\n",(expr->v).type);
     if(expr->leftOperand == NULL){
         switch( (expr->v).type ){
             case Identifier:
