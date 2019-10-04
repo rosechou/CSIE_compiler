@@ -829,6 +829,7 @@ void fprint_product( FILE *target, Value tailProduct)
                 fprintf(target,"Error In fprint_left_expr. (expr->v).type=%d in fprint_product\n",tailProduct.type);
                 break;
         }
+        printf("operator->type:%d\n",operator->type );
         fprint_op(target, operator->type);
         fprint_product(target, tailProduct); // recursive to gen stack language
         
@@ -858,7 +859,7 @@ void gencode(Program prog, FILE * target)
                    fprintf(target,"5 k\n");
                    }*/
                 fprintf(target,"s%c\n",stmt.stmt.assign.id);
-                fprintf(target,"0 k\n");
+                // fprintf(target,"0 k\n");
                 break;
         }
         stmts=stmts->rest;
