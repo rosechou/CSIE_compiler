@@ -1,7 +1,14 @@
 i a
 i b
-i c
+f c
+f d
+f e
+f g
+
 a = 1
 b = 2
-c = a + b
+d = 1.1
+e = 2.0
+g = 3.5
+c = 1.1 * 2.0 * d / a / e
 p c

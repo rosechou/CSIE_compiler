@@ -16,7 +16,7 @@ h = 4
 g = 6
 j = 2
 
-c = e + a * d + h * 5 - g
+c = e + a * d / b + h * 5 - g
 b = 3.3
 
 p c

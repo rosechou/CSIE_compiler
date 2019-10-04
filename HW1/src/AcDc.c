@@ -523,7 +523,7 @@ SymbolTable build( Program program )
 void convertType( Expression * old, DataType type )
 {
     if(old->type == Float && type == Int){
-        printf("error : can't convert float to integer\n");
+        printf("error : can't convert float to integer in convertType\n");
         return;
     }
     if(old->type == Int && type == Float){
@@ -589,7 +589,7 @@ void checkexpression( Expression * expr, SymbolTable * table )
         }
 
         // GeniusPudding, fold products here
-        
+        folding_products(expr);
 
     }
     else{
@@ -597,14 +597,127 @@ void checkexpression( Expression * expr, SymbolTable * table )
         Expression *right = expr->rightOperand;
 
         checkexpression(left, table);
-        checkexpression(right, table);
+        checkexpression(right, table); 
 
         DataType type = generalize(left, right);
         convertType(left, type);//left->type = type;//converto
         convertType(right, type);//right->type = type;//converto
         expr->type = type;
+
+        // GeniusPudding, fold sums here after the product folded in leaf nodes
+
+
     }
 }
+
+void folding_products(Expression *expr)//expr belongs to value here, mind the int/float type
+{
+    if((expr->v).type!=Identifier && (expr->v).nextInProduct!=NULL){
+        int iProduct = 1;
+        float fProduct = 1.0;
+        int productType = 0;// 0:Int, 1:Float
+        if((expr->v).type==FloatConst){
+            productType = 1;
+            fProduct = (expr->v).val.fvalue;
+            printf("%f\n",(expr->v).val.fvalue);
+        }else{
+            iProduct = (expr->v).val.ivalue;
+            printf("%d\n",(expr->v).val.ivalue);
+        }
+
+        // traverse all the values in the product
+        int continuous = 1;
+        Value *currentOperator = (expr->v).nextInProduct;
+        Value *currentValue = currentOperator->nextInProduct;
+        while(continuous){
+            printf("currentOperator->type:%d\n",currentOperator->type );
+            printf("currentValue->type:%d\n",currentValue->type );
+            switch(currentValue->type){
+                case Identifier:
+                    continuous = 0;
+                    break;
+                case IntConst:
+                    if(productType==0){
+                        if(currentOperator->type==MulNode){
+                            iProduct *= (currentValue->val).ivalue;
+                        }else if(currentOperator->type==DivNode){
+                            iProduct /= (currentValue->val).ivalue;
+                        }
+                        printf("%d\n", iProduct);
+                    }else{
+                        if(currentOperator->type==MulNode){
+                            fProduct *= (float)(currentValue->val).ivalue;
+                        }else if(currentOperator->type==DivNode){
+                            fProduct /= (float)(currentValue->val).ivalue;
+                        }      
+                        printf("%f\n", fProduct);                 
+                    } 
+                    if(currentValue->nextInProduct!=NULL){
+                        currentOperator = currentValue->nextInProduct;  
+                        free(currentValue);
+                        currentValue = currentOperator->nextInProduct;     
+                        free(currentOperator);                   
+                    }else{
+                        continuous = 0;
+                    }
+
+                    printf("currentOperator->type:%d\n",currentOperator->type );
+                    printf("currentValue->type:%d\n",currentValue->type );
+                    break;
+                case FloatConst:    
+                    if(productType==0){
+                        productType = 1;
+                        fProduct = (float)iProduct;
+                        if(currentOperator->type==MulNode){
+                            fProduct *= (currentValue->val).fvalue;
+                        }else if(currentOperator->type==DivNode){
+                            fProduct /= (currentValue->val).fvalue;
+                        }
+                        printf("%f\n", fProduct);    
+                        
+                    }else{
+                        if(currentOperator->type==MulNode){
+                            fProduct *= (currentValue->val).fvalue;
+                        }else if(currentOperator->type==DivNode){
+                            fProduct /= (currentValue->val).fvalue;
+                        }                      
+                        printf("%f\n", fProduct);    
+                    }
+                    if(currentValue->nextInProduct!=NULL){
+                        currentOperator = currentValue->nextInProduct;  
+                        free(currentValue);
+                        currentValue = currentOperator->nextInProduct;     
+                        free(currentOperator);                            
+                    }else{
+                        continuous = 0;
+                    }
+
+                    printf("currentOperator->type:%d\n",currentOperator->type );
+                    printf("currentValue->type:%d\n",currentValue->type );                               
+                    break;
+                default:
+                    break;
+            }
+
+        };//while();
+
+        //set the merge node
+        if(currentValue->type==Identifier){//coefficient followed by Identifier     
+            (expr->v).nextInProduct = currentOperator;
+        }else{// all merged as a constant
+            (expr->v).type = productType + 1;
+            (expr->v).nextInProduct = NULL;
+        }
+        if(productType==0){
+            (expr->v).val.ivalue = iProduct; 
+        }else if(productType==1){
+            (expr->v).val.fvalue = fProduct;
+        }
+        
+    }
+}
+
+
 
 void checkstmt( Statement *stmt, SymbolTable * table )
 {
@@ -614,7 +727,7 @@ void checkstmt( Statement *stmt, SymbolTable * table )
         checkexpression(assign.expr, table);
         stmt->stmt.assign.type = lookup_table(table, assign.id);
         if (assign.expr->type == Float && stmt->stmt.assign.type == Int) {
-            printf("error : can't convert float to integer\n");
+            printf("error : can't convert float to integer in checkstmt\n");
         } else {
             convertType(assign.expr, stmt->stmt.assign.type);
         }
@@ -663,7 +776,7 @@ void fprint_op( FILE *target, ValueType op )
 
 void fprint_expr( FILE *target, Expression *expr)// TODO: fprint Values in Products
 {
-    printf("fprinting:%d\n",(expr->v).type);
+    // printf("fprinting:%d\n",(expr->v).type);
     if(expr->leftOperand == NULL){
         switch( (expr->v).type ){
             case Identifier:
@@ -676,7 +789,7 @@ void fprint_expr( FILE *target, Expression *expr)// TODO: fprint Values in Produ
                 fprintf(target,"%f\n", (expr->v).val.fvalue);
                 break;
             default:
-                fprintf(target,"Error In fprint_left_expr. (expr->v).type=%d\n",(expr->v).type);
+                fprintf(target,"Error In fprint_left_expr. (expr->v).type=%d in fprint_expr\n",(expr->v).type);
                 break;
         }
 
@@ -713,7 +826,7 @@ void fprint_product( FILE *target, Value tailProduct)
                 fprintf(target,"%f\n", tailProduct.val.fvalue);
                 break;
             default:
-                fprintf(target,"Error In fprint_left_expr. (expr->v).type=%d\n",tailProduct.type);
+                fprintf(target,"Error In fprint_left_expr. (expr->v).type=%d in fprint_product\n",tailProduct.type);
                 break;
         }
         fprint_op(target, operator->type);
