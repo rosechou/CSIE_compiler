@@ -94,10 +94,6 @@ Token getNumericToken( FILE *source, char c )
 
 Token scanner( FILE *source )// TODO: support variable name that not exceed 64 characters
 {
-
-
-
-
     char c;
     Token token;
 
@@ -605,7 +601,7 @@ void checkexpression( Expression * expr, SymbolTable * table )
         expr->type = type;
 
         // GeniusPudding, fold sums here after the product folded in leaf nodes
-
+        folding_sums(expr);
 
     }
 }
@@ -699,7 +695,7 @@ void folding_products(Expression *expr)//expr belongs to value here, mind the in
                     break;
             }
 
-        };//while();
+        };
 
         //set the merge node
         if(currentValue->type==Identifier){//coefficient followed by Identifier     
@@ -717,7 +713,48 @@ void folding_products(Expression *expr)//expr belongs to value here, mind the in
     }
 }
 
+void folding_sums(Expression *expr)
+{
+    Expression *left = expr->leftOperand;
+    Expression *right = expr->rightOperand;
+    printf("(expr->v).type:%d\n",(expr->v).type );
+    printf("(right->v).nextInProduct:%p\n",(right->v).nextInProduct );
+    //check if need constant-folding
+    if(((left->v).type==IntConst||(left->v).type==FloatConst)&&(left->v).nextInProduct==NULL&&((right->v).type==IntConst||(right->v).type==FloatConst)&&(right->v).nextInProduct==NULL ){
+        printf("Two constant leaf!\n");
+        int iSum = 0;
+        float fSum = 0.0;
+        int sumType = 1;
+        if((left->v).type==IntConst&&(right->v).type==IntConst){
+            sumType = 0;
+            printf("(left->v).val.ivalue:%d,(right->v).val.ivalue:%d\n",(left->v).val.ivalue,(right->v).val.ivalue );
+            iSum = (left->v).val.ivalue + (right->v).val.ivalue;
+        }else if((left->v).type==IntConst&&(right->v).type==FloatConst){
+            printf("(float)(left->v).val.ivalue:%f,(right->v).val.fvalue:%f\n",(float)(left->v).val.ivalue,(right->v).val.fvalue );
+            fSum = (float)(left->v).val.ivalue + (right->v).val.fvalue; 
+        }else if((left->v).type==FloatConst&&(right->v).type==IntConst){
+            printf("(left->v).val.fvalue:%f,(float)(right->v).val.ivalue:%f\n",(left->v).val.fvalue,(float)(right->v).val.ivalue );    
+            fSum = (left->v).val.fvalue + (float)(right->v).val.ivalue; 
+        }else if((left->v).type==FloatConst&&(right->v).type==FloatConst){
+            printf("f (left->v).val.fvalue:%f,(right->v).val.fvalue:%f\n",(left->v).val.fvalue,(right->v).val.fvalue );
+            fSum = (left->v).val.fvalue + (right->v).val.fvalue; 
+        }
 
+        free(left);
+        free(right);
+        //assign values to expr
+        expr->leftOperand = expr->rightOperand = NULL;
+        (expr->v).nextInProduct = NULL;
+        (expr->v).type = sumType + 1;
+        if(sumType==0){
+            (expr->v).val.ivalue = iSum; 
+        }else if(sumType==1){
+            (expr->v).val.fvalue = fSum;
+        }
+        printf("iSum:%d,fSum:%f\n",iSum,fSum );
+    }
+
+}
 
 void checkstmt( Statement *stmt, SymbolTable * table )
 {

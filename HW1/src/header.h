@@ -154,4 +154,5 @@ void test_parser( FILE *source );
 void CheckProductInValue( FILE *source, Expression *value );// GeniusPudding
 void fprint_product( FILE *target, Value tailProduct);// GeniusPudding 
 void folding_products(Expression *expr);// GeniusPudding 
+void folding_sums(Expression *expr);// GeniusPudding 
 #endif // HEADER_H_INCLUDED
