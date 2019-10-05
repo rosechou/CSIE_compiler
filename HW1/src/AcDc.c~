@@ -613,15 +613,15 @@ DataType lookup_table( SymbolTable *table, char *s )// TODO: support variable le
 char lookup_id( SymbolTable *table,const char* n )
 {
     int i;
-    // printf("looking n:%s\n",n );
+    printf("looking n:%s\n",n );
     for (i=0;i<26;++i){
-        // printf("table->name[%d]:%s\n",i,table->name[i] );
+        printf("table->name[%d]:%s\n",i,table->name[i] );
         if (strcmp(table->name[i], n) == 0)
             break;        
     }
 
 
-    // printf("lookup_id:%d,char:%c\n",i,i+'a' );
+    printf("lookup_id:%d,char:%c\n",i,i+'a' );
     return i+'a';
 }
 
@@ -781,8 +781,8 @@ void folding_sums(Expression *expr)
 {
     Expression *left = expr->leftOperand;
     Expression *right = expr->rightOperand;
-    // printf("(expr->v).type:%d\n",(expr->v).type );
-    // printf("(right->v).nextInProduct:%p\n",(right->v).nextInProduct );
+    printf("(expr->v).type:%d\n",(expr->v).type );
+    printf("(right->v).nextInProduct:%p\n",(right->v).nextInProduct );
     //check if need constant-folding
     if(((left->v).type==IntConst||(left->v).type==FloatConst)&&(left->v).nextInProduct==NULL&&((right->v).type==IntConst||(right->v).type==FloatConst)&&(right->v).nextInProduct==NULL ){
         printf("Two constant leaf!\n");
@@ -791,16 +791,16 @@ void folding_sums(Expression *expr)
         int sumType = 1;
         if((left->v).type==IntConst&&(right->v).type==IntConst){
             sumType = 0;
-            // printf("(left->v).val.ivalue:%d,(right->v).val.ivalue:%d\n",(left->v).val.ivalue,(right->v).val.ivalue );
+            printf("(left->v).val.ivalue:%d,(right->v).val.ivalue:%d\n",(left->v).val.ivalue,(right->v).val.ivalue );
             iSum = (left->v).val.ivalue + (right->v).val.ivalue;
         }else if((left->v).type==IntConst&&(right->v).type==FloatConst){
-            // printf("(float)(left->v).val.ivalue:%f,(right->v).val.fvalue:%f\n",(float)(left->v).val.ivalue,(right->v).val.fvalue );
+            printf("(float)(left->v).val.ivalue:%f,(right->v).val.fvalue:%f\n",(float)(left->v).val.ivalue,(right->v).val.fvalue );
             fSum = (float)(left->v).val.ivalue + (right->v).val.fvalue; 
         }else if((left->v).type==FloatConst&&(right->v).type==IntConst){
-            // printf("(left->v).val.fvalue:%f,(float)(right->v).val.ivalue:%f\n",(left->v).val.fvalue,(float)(right->v).val.ivalue );    
+            printf("(left->v).val.fvalue:%f,(float)(right->v).val.ivalue:%f\n",(left->v).val.fvalue,(float)(right->v).val.ivalue );    
             fSum = (left->v).val.fvalue + (float)(right->v).val.ivalue; 
         }else if((left->v).type==FloatConst&&(right->v).type==FloatConst){
-            // printf("f (left->v).val.fvalue:%f,(right->v).val.fvalue:%f\n",(left->v).val.fvalue,(right->v).val.fvalue );
+            printf("f (left->v).val.fvalue:%f,(right->v).val.fvalue:%f\n",(left->v).val.fvalue,(right->v).val.fvalue );
             fSum = (left->v).val.fvalue + (right->v).val.fvalue; 
         }
 
@@ -815,7 +815,7 @@ void folding_sums(Expression *expr)
         }else if(sumType==1){
             (expr->v).val.fvalue = fSum;
         }
-        // printf("iSum:%d,fSum:%f\n",iSum,fSum );
+        printf("iSum:%d,fSum:%f\n",iSum,fSum );
     }
 
 }
@@ -855,7 +855,6 @@ void check( Program *program, SymbolTable * table )
  ************************************************************************/
 void fprint_op( FILE *target, ValueType op )
 {
-    printf("In fprint_op, type=%d\n",op);
     switch(op){
         case MinusNode:
             fprintf(target,"-\n");
