@@ -654,7 +654,7 @@ void checkexpression( Expression * expr, SymbolTable * table )
         }
 
         // GeniusPudding, fold products here
-        folding_products(expr, table);
+        folding_products(expr);
 
     }
     else{
@@ -675,10 +675,8 @@ void checkexpression( Expression * expr, SymbolTable * table )
     }
 }
 
-void folding_products(Expression *expr, SymbolTable *table)//expr belongs to value here, mind the int/float type
+void folding_products(Expression *expr)//expr belongs to value here, mind the int/float type
 {
-    printf("In folding_products, (expr->v).type:%d\n", (expr->v).type);
-
     if((expr->v).type!=Identifier && (expr->v).nextInProduct!=NULL){
         int iProduct = 1;
         float fProduct = 1.0;
@@ -701,7 +699,6 @@ void folding_products(Expression *expr, SymbolTable *table)//expr belongs to val
             printf("currentValue->type:%d\n",currentValue->type );
             switch(currentValue->type){
                 case Identifier:
-                    printf("Got Identifier:%c\n",lookup_id(table, (currentValue->val).id));
                     continuous = 0;
                     break;
                 case IntConst:
