@@ -649,7 +649,7 @@ void checkexpression( Expression * expr, SymbolTable * table )
         }
 
         // GeniusPudding, fold products here
-        folding_products(expr);
+        folding_products(expr, table);
 
     }
     else{
@@ -670,7 +670,7 @@ void checkexpression( Expression * expr, SymbolTable * table )
     }
 }
 
-void folding_products(Expression *expr)//expr belongs to value here, mind the int/float type
+void folding_products(Expression *expr, SymbolTable *table)//expr belongs to value here, mind the int/float type
 {
     if((expr->v).type!=Identifier && (expr->v).nextInProduct!=NULL){
         int iProduct = 1;
@@ -694,6 +694,7 @@ void folding_products(Expression *expr)//expr belongs to value here, mind the in
             printf("currentValue->type:%d\n",currentValue->type );
             switch(currentValue->type){
                 case Identifier:
+                    printf("Got Identifier:%s\n",lookup_id(table, (currentValue->val).id));
                     continuous = 0;
                     break;
                 case IntConst:
@@ -764,6 +765,7 @@ void folding_products(Expression *expr)//expr belongs to value here, mind the in
         //set the merge node
         if(currentValue->type==Identifier){//coefficient followed by Identifier     
             (expr->v).nextInProduct = currentOperator;
+            printf("currentOperator before Identifier:%d\n",currentOperator->type );
         }else{// all merged as a constant
             (expr->v).type = productType + 1;
             (expr->v).nextInProduct = NULL;
@@ -922,6 +924,7 @@ void fprint_expr( FILE *target, Expression *expr, SymbolTable* table)// TODO: fp
 // GeniusPudding
 void fprint_product( FILE *target, Value tailProduct, SymbolTable *table)
 {
+    printf("In fprint_product tailProduct.type:%d\n",tailProduct.type);
     if(tailProduct.nextInProduct!=NULL && (tailProduct.nextInProduct->type==MulNode||tailProduct.nextInProduct->type==DivNode)){
         Value *operator = tailProduct.nextInProduct;
         tailProduct = *(operator->nextInProduct);//next value

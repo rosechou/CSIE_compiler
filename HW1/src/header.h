@@ -159,6 +159,6 @@ void print_expr( Expression *expr );
 void test_parser( FILE *source );
 void CheckProductInValue( FILE *source, Expression *value );// GeniusPudding
 void fprint_product( FILE *target, Value tailProduct, SymbolTable* table );// GeniusPudding 
-void folding_products(Expression *expr);// GeniusPudding 
+void folding_products(Expression *expr, SymbolTable* table );// GeniusPudding 
 void folding_sums(Expression *expr);// GeniusPudding 
 #endif // HEADER_H_INCLUDED
