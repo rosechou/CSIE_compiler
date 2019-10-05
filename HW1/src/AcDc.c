@@ -291,7 +291,7 @@ void CheckProductInValue( FILE *source, Expression *value )
                 operator->type = DivNode;
                 (operator->val).op = Div;
             } 
-            
+
             printf("CheckProductInValue operator->type:%d,operator->nextInProduct->type:%d\n",operator->type,operator->nextInProduct->type);
 
             break;            
@@ -677,6 +677,8 @@ void checkexpression( Expression * expr, SymbolTable * table )
 
 void folding_products(Expression *expr, SymbolTable *table)//expr belongs to value here, mind the int/float type
 {
+    printf("In folding_products, (expr->v).type:%d\n", (expr->v).type);
+
     if((expr->v).type!=Identifier && (expr->v).nextInProduct!=NULL){
         int iProduct = 1;
         float fProduct = 1.0;
@@ -719,10 +721,10 @@ void folding_products(Expression *expr, SymbolTable *table)//expr belongs to val
                         printf("%f\n", fProduct);                 
                     } 
                     if(currentValue->nextInProduct!=NULL){
+                        free(currentOperator);
                         currentOperator = currentValue->nextInProduct;  
                         free(currentValue);
-                        currentValue = currentOperator->nextInProduct;     
-                        free(currentOperator);                   
+                        currentValue = currentOperator->nextInProduct;                       
                     }else{
                         continuous = 0;
                     }
@@ -750,10 +752,10 @@ void folding_products(Expression *expr, SymbolTable *table)//expr belongs to val
                         printf("%f\n", fProduct);    
                     }
                     if(currentValue->nextInProduct!=NULL){
+                        free(currentOperator);
                         currentOperator = currentValue->nextInProduct;  
                         free(currentValue);
-                        currentValue = currentOperator->nextInProduct;     
-                        free(currentOperator);                            
+                        currentValue = currentOperator->nextInProduct;                              
                     }else{
                         continuous = 0;
                     }
