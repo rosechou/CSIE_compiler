@@ -275,7 +275,9 @@ void CheckProductInValue( FILE *source, Expression *value )
             (value->v).nextInProduct = operator;// all Product content listed in only An Expression: value
 
             Expression *tailValue = parseValue(source);// recursion for tail 
-            operator->nextInProduct = &(tailValue->v);
+            operator->nextInProduct = (Value *)malloc( sizeof(Value) );
+            memcpy(operator->nextInProduct, &(tailValue->v), sizeof(Value));
+            // operator->nextInProduct = &(tailValue->v);
 
             if(operatorToken.type == MulOp){
                 operator->type = MulNode;
@@ -289,6 +291,9 @@ void CheckProductInValue( FILE *source, Expression *value )
                 operator->type = DivNode;
                 (operator->val).op = Div;
             } 
+            
+            printf("CheckProductInValue operator->type:%d,operator->nextInProduct->type:%d\n",operator->type,operator->nextInProduct->type);
+
             break;            
         default:
             temporaryToken = operatorToken;
@@ -694,7 +699,7 @@ void folding_products(Expression *expr, SymbolTable *table)//expr belongs to val
             printf("currentValue->type:%d\n",currentValue->type );
             switch(currentValue->type){
                 case Identifier:
-                    printf("Got Identifier:%s\n",lookup_id(table, (currentValue->val).id));
+                    printf("Got Identifier:%c\n",lookup_id(table, (currentValue->val).id));
                     continuous = 0;
                     break;
                 case IntConst:
