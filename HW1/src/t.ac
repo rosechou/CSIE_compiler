@@ -1,14 +1,14 @@
-i a
-i b
-f c
+i apa
+i biiiiii
+f cfipfipfipfipfip
 f d
 f e
 f g
 
-a = 1
-b = 2
+apa = 1
+biiiiii = 2
 d = 1.1
 e = 2.0
 g = 3.5
-c = 3 + 2 + b - 1.0 - 2 + 1.1 * 2.0 * d / a / e
-p c
+cfipfipfipfipfip = 3 + 2 + biiiiii - 1.0 - 2 + 1.1 * 2.0 * d / apa / e
+p cfipfipfipfipfip
