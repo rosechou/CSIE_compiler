@@ -285,7 +285,7 @@ block           : decl_list stmt_list
                     }
                 |   {
                         /*GeniusPudding*/
-                        $$ = Allocate(NUL_NODE); 
+                        $$ = Allocate(BLOCK_NODE); 
                     }
                 ;
  
@@ -335,7 +335,7 @@ var_decl	: type init_id_list MK_SEMICOLON
                 {
                     /*GeniusPudding*/
                     $$ = makeDeclNode(VARIABLE_DECL);
-                    makeFamily($$, 2, $1, $2);
+                    makeFamily($$, 2, makeIDNode($1, NORMAL_ID), $2);
                 }
             ;
 
