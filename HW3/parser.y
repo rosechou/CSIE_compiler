@@ -163,8 +163,8 @@ static inline AST_NODE* makeExprNode(EXPR_KIND exprKind, int operationEnumValue)
 /* ==== Grammar Section ==== */
 
 /* Productions */               /* Semantic actions */
-program		: global_decl_list { $$=Allocate(PROGRAM_NODE);  makeChild($$,$1); prog=$$;}
-		| { $$=Allocate(PROGRAM_NODE); prog=$$;}
+program		: global_decl_list { $$=Allocate(PROGRAM_NODE);  makeChild($$,$1); prog=$$;printf("111\n");}
+		| { $$=Allocate(PROGRAM_NODE); prog=$$;printf("222\n");}
 		;
 
 global_decl_list: global_decl_list global_decl 
@@ -224,7 +224,7 @@ param_list	: param_list MK_COMMA  param
             | param	
                 {
                     /*GeniusPudding*/    
-                    $$ = $1
+                    $$ = $1;
                 }
             ;
 
@@ -737,13 +737,13 @@ factor		: MK_LPAREN relop_expr MK_RPAREN
             | OP_MINUS MK_LPAREN relop_expr MK_RPAREN
                 {
                     /*GeniusPudding*/
-                    $$ = makeExprNode(UNARY_OPERATOR, UNARY_OP_NEGATIVE);
+                    $$ = makeExprNode(UNARY_OPERATION, UNARY_OP_NEGATIVE);
                     makeChild($$, $3);                    
                 }
             | OP_NOT MK_LPAREN relop_expr MK_RPAREN
                 {   
                     /*GeniusPudding*/
-                    $$ = makeExprNode(UNARY_OPERATOR, UNARY_OP_LOGICAL_NEGATION);
+                    $$ = makeExprNode(UNARY_OPERATION, UNARY_OP_LOGICAL_NEGATION);
                     makeChild($$, $3);
                 }
             | CONST 
@@ -755,7 +755,7 @@ factor		: MK_LPAREN relop_expr MK_RPAREN
             | OP_MINUS CONST
                 {
                     /*GeniusPudding*/
-                    $$ = makeExprNode(UNARY_OPERATOR, UNARY_OP_NEGATIVE);
+                    $$ = makeExprNode(UNARY_OPERATION, UNARY_OP_NEGATIVE);
                     AST_NODE* const_node = Allocate(CONST_VALUE_NODE);
                     const_node->semantic_value.const1=$2;
                     makeChild($$, const_node);                       
@@ -763,7 +763,7 @@ factor		: MK_LPAREN relop_expr MK_RPAREN
             | OP_NOT CONST
                 {
                     /*GeniusPudding*/
-                    $$ = makeExprNode(UNARY_OPERATOR, UNARY_OP_LOGICAL_NEGATION);
+                    $$ = makeExprNode(UNARY_OPERATION, UNARY_OP_LOGICAL_NEGATION);
                     AST_NODE* const_node = Allocate(CONST_VALUE_NODE);
                     const_node->semantic_value.const1=$2;
                     makeChild($$, const_node);       
@@ -778,7 +778,7 @@ factor		: MK_LPAREN relop_expr MK_RPAREN
             | OP_MINUS ID MK_LPAREN relop_expr_list MK_RPAREN
                 {
                     /*GeniusPudding*/
-                    $$ = makeExprNode(UNARY_OPERATOR, UNARY_OP_NEGATIVE);
+                    $$ = makeExprNode(UNARY_OPERATION, UNARY_OP_NEGATIVE);
                     AST_NODE* function_call_node  = makeStmtNode(FUNCTION_CALL_STMT);
                     makeChild($$, function_call_node);
                     makeFamily(function_call_node, 2, makeIDNode($2, NORMAL_ID), $4);                     
@@ -786,7 +786,7 @@ factor		: MK_LPAREN relop_expr MK_RPAREN
             | OP_NOT ID MK_LPAREN relop_expr_list MK_RPAREN
                 {
                     /*GeniusPudding*/
-                    $$ = makeExprNode(UNARY_OPERATOR, UNARY_OP_LOGICAL_NEGATION);
+                    $$ = makeExprNode(UNARY_OPERATION, UNARY_OP_LOGICAL_NEGATION);
                     AST_NODE* function_call_node  = makeStmtNode(FUNCTION_CALL_STMT);
                     makeChild($$, function_call_node);
                     makeFamily(function_call_node, 2, makeIDNode($2, NORMAL_ID), $4); 
@@ -800,13 +800,13 @@ factor		: MK_LPAREN relop_expr MK_RPAREN
             | OP_MINUS var_ref 
                 {
                     /*GeniusPudding*/
-                    $$ = makeExprNode(UNARY_OPERATOR, UNARY_OP_NEGATIVE);
+                    $$ = makeExprNode(UNARY_OPERATION, UNARY_OP_NEGATIVE);
                     makeChild($$, $2);
                 }
             | OP_NOT var_ref 
                 {
                     /*GeniusPudding*/
-                    $$ = makeExprNode(UNARY_OPERATOR, UNARY_OP_LOGICAL_NEGATION);
+                    $$ = makeExprNode(UNARY_OPERATION, UNARY_OP_LOGICAL_NEGATION);
                     makeChild($$, $2);
                 }
             ;
