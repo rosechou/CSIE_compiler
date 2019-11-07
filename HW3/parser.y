@@ -518,7 +518,7 @@ stmt		: MK_LBRACE block MK_RBRACE
                     makeFamily($$, 3, $3, $5, $7);
                 } 
             /*GeniusPudding: | function call */ 
-            | ID MK_LPAREN relop_expr_list MK_RPAREN    
+            | ID MK_LPAREN relop_expr_list MK_RPAREN MK_SEMICOLON    
                 {
                     /*GeniusPudding*/
                     $$ = makeStmtNode(FUNCTION_CALL_STMT);
@@ -527,12 +527,14 @@ stmt		: MK_LBRACE block MK_RBRACE
 
             | MK_SEMICOLON 
                 {
-                    /*TODO*/
+                    /*GeniusPudding*/
+                    $$ = Allocate(NUL_NODE);
                 }
             | RETURN MK_SEMICOLON  
                 {
                     /*GeniusPudding*/
                     $$ = makeStmtNode(RETURN_STMT);
+                    makeChild($$, Allocate(NUL_NODE));
                 }
             | RETURN relop_expr MK_SEMICOLON
                 {
