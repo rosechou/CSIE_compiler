@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-//TODO: modify all register names
+//TODO: modify all register names, cmp
 
 
 FILE *output;
@@ -45,7 +45,7 @@ void gen_epilogue(char *name){
 	fprintf(output, "ld x30,8(x29)\n");
 	fprintf(output, "add sp, x29, #8\n");
 	fprintf(output, "ld x29,0(x29)\n");
-	fprintf(output, "ret x30\n");
+	fprintf(output, "jr x30\n");
 }
 
 int get_reg(){
@@ -542,7 +542,7 @@ int genExpr(AST_NODE *exprNode){
 						fprintf(output, "add w%d, w%d, w%d\n", reg1, reg1, reg2);
 						break;
 					case BINARY_OP_SUB:
-						fprintf(output, "sub w%d, w%d, w%d\n", reg1, reg1, reg2);
+						fprintf(output, "subw w%d, w%d, w%d\n", reg1, reg1, reg2);
 						break;
 					case BINARY_OP_MUL:
 						fprintf(output, "mulw w%d, w%d, w%d\n", reg1, reg1, reg2);
