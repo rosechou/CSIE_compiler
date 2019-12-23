@@ -21,13 +21,14 @@
 #define const_type(node) node->semantic_value.const1->const_type
 #define expr_bin_op(node) node->semantic_value.exprSemanticValue.op.binaryOp
 #define expr_uni_op(node) node->semantic_value.exprSemanticValue.op.unaryOp
-#define expr_eval(node) node->semantic_value.exprSemanticValue.constEvalValue
+#define expr_const_eval(node) node->semantic_value.exprSemanticValue.constEvalValue
 
 void gen_head(char *name);
 void gen_prologue(char *name);
 void gen_epilogue(char *name);
 int get_reg();
 void free_reg(int reg);
+int get_float_reg();
 void gen_Alignment();
 void gen_data(int reg, int offset, char type);
 void codegen(AST_NODE *root);
