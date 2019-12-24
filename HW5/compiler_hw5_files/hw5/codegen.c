@@ -23,9 +23,9 @@ void gen_prologue(char *name){
 	fprintf(output, "sd fp,-8(sp)\n");
 	fprintf(output, "add fp, sp, -8\n");
 	fprintf(output, "add sp, sp, -16\n");
-    fprintf(fp, "la ra, _frameSize_%s\n", name);
-    fprintf(fp, "lw ra,0(ra)\n");
-    fprintf(fp, "sub sp,sp,ra\n");
+    fprintf(output, "la ra, _frameSize_%s\n", name);
+    fprintf(output, "lw ra,0(ra)\n");
+    fprintf(output, "sub sp,sp,ra\n");
 
     // callee save:
 	int offset = 8;
@@ -55,7 +55,6 @@ void gen_prologue(char *name){
 }
 
 void gen_epilogue(char *name){
-	int offset = 0;
 	fprintf(output, "_end_%s:\n", name);
     // callee load:
 	int offset = 8;
@@ -140,8 +139,7 @@ void genLocalVarDecl(AST_NODE *DeclListNode){//any array in HW5?
 	for(AST_NODE *declNode = DeclListNode->child ; declNode != NULL ; declNode = declNode->rightSibling){
 		if( node_decl_kind(declNode) == VARIABLE_DECL){
 			int offset = 0;
-			for (AST_NODE *idNode = declNode->child->rightSibling ; idNode != NULL; idNode = idNode->rightSibling)
-			{
+			for (AST_NODE *idNode = declNode->child->rightSibling ; idNode != NULL; idNode = idNode->rightSibling){
 				SymbolTableEntry *entry = node_id_entry(idNode);
 				if(sym_typedesc(entry)->kind == SCALAR_TYPE_DESCRIPTOR)
 					offset += 4;
@@ -594,6 +592,7 @@ int genExpr(AST_NODE *exprNode){
 			}
 			if(leftNode->dataType == INT_TYPE && rightNode->dataType == INT_TYPE){
 				exprNode->dataType = INT_TYPE;
+				int swap_tmp;
 				switch(expr_bin_op(exprNode)){
 					case BINARY_OP_ADD:
 						fprintf(output, "addw t%d, t%d, t%d\n", reg1, reg1, reg2);
@@ -614,7 +613,7 @@ int genExpr(AST_NODE *exprNode){
 						genIntBinaryOp(exprNode, reg1, reg2, "bge");
 						break;
 					case BINARY_OP_LE://risc-v not support ble
-						int swap_tmp = reg1;
+						swap_tmp = reg1;
 						reg1 = reg2;
 						reg2 = swap_tmp;
 						genIntBinaryOp(exprNode, reg1, reg2, "bge");					
@@ -623,7 +622,7 @@ int genExpr(AST_NODE *exprNode){
 						genIntBinaryOp(exprNode, reg1, reg2, "bne");
 						break;
 					case BINARY_OP_GT://risc-v not support bgt
-						int swap_tmp = reg1;
+						swap_tmp = reg1;
 						reg1 = reg2;
 						reg2 = swap_tmp;
 						genIntBinaryOp(exprNode, reg1, reg2, "blt");
