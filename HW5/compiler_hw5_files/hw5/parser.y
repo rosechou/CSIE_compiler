@@ -7,6 +7,7 @@
 #include <stdarg.h>
 #include "header.h"
 #include "symbolTable.h"
+#include "codegen.h"
 int linenumber = 1;
 AST_NODE *prog;
 
@@ -766,6 +767,7 @@ char *argv[];
 
      semanticAnalysis(prog);
 
+     codegen(prog);
      symbolTableEnd();
      if (!g_anyErrorOccur) {
         printf("Parsing completed. No errors found.\n");
