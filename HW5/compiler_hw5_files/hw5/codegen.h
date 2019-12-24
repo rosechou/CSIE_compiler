@@ -49,6 +49,6 @@ int genExprRelated(AST_NODE *exprRNode);
 int genExpr(AST_NODE *exprNode);
 void genWrite(AST_NODE *node);
 void genIntBinaryOp(AST_NODE *exprNode, int reg1, int reg2, char *op);
-void genFloatBinaryOp(AST_NODE *exprNode, int reg1, int reg2, char *op);
+int genFloatBinaryOp(AST_NODE *exprNode, int reg1, int reg2, char *op);
 
 #endif

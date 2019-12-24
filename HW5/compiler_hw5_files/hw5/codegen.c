@@ -455,7 +455,7 @@ int genExprRelated(AST_NODE *exprRelatedNode){//TODO: Support return float tmp r
 						fprintf(output, "flw ft%d,_%s\n", reg, exprRelatedNode->semantic_value.identifierSemanticValue.identifierName);
 					}
 				}else{
-					gen_offset_data(reg, entry->offset);//TODO:
+					gen_offset_data(reg, entry->offset);
 					fprintf(output, "sub t%d, fp, t%d\n", reg, reg);
 					if(exprRelatedNode->dataType == INT_TYPE){
 						fprintf(output, "lw t%d,0(t%d)\n", reg, reg);
@@ -534,26 +534,22 @@ int genExprRelated(AST_NODE *exprRelatedNode){//TODO: Support return float tmp r
 	return reg;
 }
 
-void genIntBinaryOp(AST_NODE *exprNode, int reg1, int reg2, char *op){//TODO: generate else label here?
+void genIntBinaryOp(AST_NODE *exprNode, int reg1, int reg2, char *op){//BEQ/BNE/BLT/BGE
 	exprNode->dataType = INT_TYPE;
-	fprintf(output, "cmp t%d, t%d\n", reg1, reg2);
-	fprintf(output, "%s _elseLabel_%d\n", op, g_cnt);
+	fprintf(output, "%s t%d, t%d _binaryOpLabel_%d\n", op, reg1, reg2, g_cnt);
 	fprintf(output, "mv t%d,x0\n", reg1);
-	fprintf(output, "j _END_%d\n", g_cnt);
-	fprintf(output, "_elseLabel_%d:\n", g_cnt);
+	fprintf(output, "j _END_binaryOp_%d\n", g_cnt);
+	fprintf(output, "_binaryOpLabel_%d:\n", g_cnt);
 	fprintf(output, "addi t%d,x0,1\n", reg1);
-	fprintf(output, "_END_%d:\n", g_cnt++);
+	fprintf(output, "_END_binaryOp_%d:\n", g_cnt++);
 }
 
-void genFloatBinaryOp(AST_NODE *exprNode, int reg1, int reg2, char *op){
+int genFloatBinaryOp(AST_NODE *exprNode, int reg1, int reg2, char *op){//FEQ.S/FLT.S/FLE.S
 	exprNode->dataType = INT_TYPE;
-	fprintf(output, "fcmp t%d, t%d\n", reg1, reg2);
-	fprintf(output, "%s _elseLabel_%d\n", op, g_cnt);
-	fprintf(output, "mv t%d,x0\n", reg1);
-	fprintf(output, "j _END_%d\n", g_cnt);
-	fprintf(output, "_elseLabel_%d:\n", g_cnt);
-	fprintf(output, "addi t%d,x0,1\n", reg1);
-	fprintf(output, "_END_%d:\n", g_cnt++);
+	int rd_reg = get_reg();
+	fprintf(output, "%s t%d, ft%d, ft%d\n", op,rd_reg, reg1-7, reg2-7);
+	free_reg(reg1);
+	return rd_reg;
 }
 
 int genExpr(AST_NODE *exprNode){
@@ -579,12 +575,10 @@ int genExpr(AST_NODE *exprNode){
 			return reg;
 		}else{
 			int reg1 = genExprRelated(leftNode);
-			
-			if(leftNode->dataType == INT_TYPE){
-				free_reg(reg1);
+			free_reg(reg1);
+			if(leftNode->dataType == INT_TYPE){				
 				fprintf(output, "sw t%d,0(sp)\n", reg1);
 			}else{
-				free_reg(reg1);
 				fprintf(output, "fsw ft%d,0(sp)\n", reg1-7);
 			}
 			fprintf(output, "addi sp, sp, -8\n");
@@ -619,39 +613,29 @@ int genExpr(AST_NODE *exprNode){
 					case BINARY_OP_GE:
 						genIntBinaryOp(exprNode, reg1, reg2, "bge");
 						break;
-					case BINARY_OP_LE:
-						genIntBinaryOp(exprNode, reg1, reg2, "ble");
+					case BINARY_OP_LE://risc-v not support ble
+						int swap_tmp = reg1;
+						reg1 = reg2;
+						reg2 = swap_tmp;
+						genIntBinaryOp(exprNode, reg1, reg2, "bge");					
 						break;
 					case BINARY_OP_NE:
 						genIntBinaryOp(exprNode, reg1, reg2, "bne");
 						break;
-					case BINARY_OP_GT:
-						genIntBinaryOp(exprNode, reg1, reg2, "bgt");
+					case BINARY_OP_GT://risc-v not support bgt
+						int swap_tmp = reg1;
+						reg1 = reg2;
+						reg2 = swap_tmp;
+						genIntBinaryOp(exprNode, reg1, reg2, "blt");
 						break;
 					case BINARY_OP_LT:
 						genIntBinaryOp(exprNode, reg1, reg2, "blt");
 						break;
 					case BINARY_OP_AND:
-						fprintf(output, "cmp t%d, #0\n", reg1);
-						fprintf(output, "beq _elseLabel_%d\n", g_cnt);
-						fprintf(output, "cmp t%d, #0\n", reg2);
-						fprintf(output, "beq _elseLabel_%d\n", g_cnt);
-						fprintf(output, "addi t%d,x0,1\n", reg1);
-						fprintf(output, "j _END_%d\n", g_cnt);
-						fprintf(output, "_elseLabel_%d:\n", g_cnt);
-						fprintf(output, "mv t%d,x0\n", reg1);
-						fprintf(output, "_END_%d:\n", g_cnt++);
+						fprintf(output, "and %d, %d, %d", reg1, reg1, reg2);
 						break;
-					case BINARY_OP_OR:;
-						fprintf(output, "cmp t%d, #0\n", reg1);
-						fprintf(output, "bne _elseLabel_%d\n", g_cnt);
-						fprintf(output, "cmp t%d, #0\n", reg2);
-						fprintf(output, "bne _elseLabel_%d\n", g_cnt);
-						fprintf(output, "mv t%d,x0\n", reg1);
-						fprintf(output, "j _END_%d\n", g_cnt);
-						fprintf(output, "_elseLabel_%d:\n", g_cnt);
-						fprintf(output, "addi t%d,x0,1\n", reg1);
-						fprintf(output, "_END_%d:\n", g_cnt++);
+					case BINARY_OP_OR:
+						fprintf(output, "or %d, %d, %d", reg1, reg1, reg2);
 						break;	
 				}
 				free_reg(reg2);
@@ -660,68 +644,58 @@ int genExpr(AST_NODE *exprNode){
 				exprNode->dataType = FLOAT_TYPE;
 				if(leftNode->dataType == INT_TYPE){
 					fprintf(output, "fcvt.s.w t%d, t%d\n", reg1, reg1);
+					free_reg(reg1);
+					int tmp = reg1;
+					reg1 = get_float_reg();
+					fprintf(output, "fmv.w.x ft%d t%d\n", reg1-7, tmp);
 				}
 				if(rightNode->dataType == INT_TYPE){
 					fprintf(output, "fcvt.s.w t%d, t%d\n", reg2, reg2);
+					free_reg(reg2);
+					int tmp = reg2;
+					reg2 = get_float_reg();
+					fprintf(output, "fmv.w.x ft%d t%d\n", reg2-7, tmp);					
 				}
+				
 
 				switch(expr_bin_op(exprNode)){
 					case BINARY_OP_ADD:
-						fprintf(output, "fadd.s t%d, t%d, t%d\n", reg1, reg1, reg2);
+						fprintf(output, "fadd.s ft%d, ft%d, ft%d\n", reg1-7, reg1-7, reg2-7);
 						break;
 					case BINARY_OP_SUB:
-						fprintf(output, "fsub.s t%d, t%d, t%d\n", reg1, reg1, reg2);
+						fprintf(output, "fsub.s ft%d, ft%d, ft%d\n", reg1-7, reg1-7, reg2-7);
 						break;
 					case BINARY_OP_MUL:
-						fprintf(output, "fmul.s t%d, t%d, t%d\n", reg1, reg1, reg2);
+						fprintf(output, "fmul.s ft%d, ft%d, ft%d\n", reg1-7, reg1-7, reg2-7);
 						break;
 					case BINARY_OP_DIV:
-						fprintf(output, "fdiv.s t%d, t%d, t%d\n", reg1, reg1, reg2);
+						fprintf(output, "fdiv.s ft%d, ft%d, ft%d\n", reg1-7, reg1-7, reg2-7);
 						break;
-					case BINARY_OP_EQ:
-						genFloatBinaryOp(exprNode, reg1, reg2, "beq");
+					case BINARY_OP_EQ://FEQ.S/FLT.S/FLE.S
+						reg1 = genFloatBinaryOp(exprNode, reg1, reg2, "feq.s");
 						break;
 					case BINARY_OP_GE:
-						genFloatBinaryOp(exprNode, reg1, reg2, "bge");
+						reg1 = genFloatBinaryOp(exprNode, reg1, reg2, "bge");
 						break;
 					case BINARY_OP_LE:
-						genFloatBinaryOp(exprNode, reg1, reg2, "ble");
+						reg1 = genFloatBinaryOp(exprNode, reg1, reg2, "ble");
 						break;
 					case BINARY_OP_NE:
-						genFloatBinaryOp(exprNode, reg1, reg2, "bne");
+						reg1 = genFloatBinaryOp(exprNode, reg1, reg2, "bne");
 						break;
 					case BINARY_OP_GT:
-						genFloatBinaryOp(exprNode, reg1, reg2, "bgt");
+						reg1 = genFloatBinaryOp(exprNode, reg1, reg2, "bgt");
 						break;
 					case BINARY_OP_LT:
-						genFloatBinaryOp(exprNode, reg1, reg2, "blt");
+						reg1 = genFloatBinaryOp(exprNode, reg1, reg2, "blt");
 						break;
 					case BINARY_OP_AND:
-						exprNode->dataType = INT_TYPE;
-						fprintf(output, "fcmp t%d, #0\n", reg1);
-						fprintf(output, "beq _elseLabel_%d\n", g_cnt);
-						fprintf(output, "cmp t%d, #0\n", reg2);
-						fprintf(output, "beq _elseLabel_%d\n", g_cnt);
-						fprintf(output, "addi t%d,x0,1\n", reg1);
-						fprintf(output, "j _END_%d\n", g_cnt);
-						fprintf(output, "_elseLabel_%d:\n", g_cnt);
-						fprintf(output, "mv t%d,x0\n", reg1);
-						fprintf(output, "_END_%d:\n", g_cnt);
-						++g_cnt;
+						fprintf(output, "and %d, %d, %d", reg1, reg1, reg2);//what does it mean?
 						break;
 					case BINARY_OP_OR:
-						exprNode->dataType = INT_TYPE;
-						fprintf(output, "fcmp t%d, #0\n", reg1);
-						fprintf(output, "bne _elseLabel_%d\n", g_cnt);
-						fprintf(output, "cmp t%d, #0\n", reg2);
-						fprintf(output, "bne _elseLabel_%d\n", g_cnt);
-						fprintf(output, "mv t%d,x0\n", reg1);
-						fprintf(output, "j _END_%d\n", g_cnt);
-						fprintf(output, "_elseLabel_%d:\n", g_cnt);
-						fprintf(output, "addi t%d,x0,1\n", reg1);
-						fprintf(output, "_END_%d:\n", g_cnt);
-						++g_cnt;
+						fprintf(output, "or %d, %d, %d", reg1, reg1, reg2);
 						break;
+
 				}
 				free_reg(reg2);
 				return reg1;
@@ -752,36 +726,38 @@ int genExpr(AST_NODE *exprNode){
 		}else{
 			int reg = genExprRelated(operand);
 			if(operand->dataType == INT_TYPE){
-				if(expr_uni_op(exprNode) == UNARY_OP_NEGATIVE)
-					fprintf(output, "neg t%d, t%d", reg, reg);
-				else if(expr_uni_op(exprNode) == UNARY_OP_LOGICAL_NEGATION){
-					fprintf(output, "cmp t%d, #0\n", reg);
-					fprintf(output, "beq _elseLabel_%d\n", g_cnt);
+				if(expr_uni_op(exprNode) == UNARY_OP_NEGATIVE){
+					fprintf(output, "subw t%d,x0,t%d", reg, reg); //neg = sub rd, x0, rs
+				}else if(expr_uni_op(exprNode) == UNARY_OP_LOGICAL_NEGATION){
+					fprintf(output, "beq t%d,x0,_unaryOpLabel_%d\n", reg, g_cnt);
 					fprintf(output, "mv t%d,x0\n", reg);
-					fprintf(output, "j _END_%d\n", g_cnt);
-					fprintf(output, "_elseLabel_%d:\n", g_cnt);
+					fprintf(output, "j _END_unaryOp_%d\n", g_cnt);
+					fprintf(output, "_unaryOpLabel_%d:\n", g_cnt);
 					fprintf(output, "addi t%d,x0,1\n", reg);
-					fprintf(output, "_END_%d:\n", g_cnt++);
+					fprintf(output, "_END_unaryOp_%d:\n", g_cnt++);
 				}
 			}else{
 				exprNode->dataType = FLOAT_TYPE;
-				if(expr_uni_op(exprNode) == UNARY_OP_NEGATIVE)
-					fprintf(output, "fneg t%d, t%d", reg, reg);
-				else if(expr_uni_op(exprNode) == UNARY_OP_LOGICAL_NEGATION){
-					fprintf(output, "fcvt.w.s t%d, t%d\n", reg, reg);
-					fprintf(output, "cmp t%d, #0\n", reg);
-					fprintf(output, "beq _elseLabel_%d\n", g_cnt);
+				if(expr_uni_op(exprNode) == UNARY_OP_NEGATIVE){
+					fprintf(output, "fsub.s ft%d,x0,ft%d", reg-7, reg-7);
+				}else if(expr_uni_op(exprNode) == UNARY_OP_LOGICAL_NEGATION){
+					int tmp = get_reg();
+					free_reg(reg);
+					fprintf(output, "fcvt.w.s t%d, t%d\n", tmp, reg-7);
+					reg = tmp;
+					fprintf(output, "beq t%d,x0,_unaryOpLabel_%d\n", reg, g_cnt);
 					fprintf(output, "mv t%d,x0\n", reg);
-					fprintf(output, "j _END_%d\n", g_cnt);
-					fprintf(output, "_elseLabel_%d:\n", g_cnt);
+					fprintf(output, "j _END_unaryOp_%d\n", g_cnt);
+					fprintf(output, "_unaryOpLabel_%d:\n", g_cnt);
 					fprintf(output, "addi t%d,x0,1\n", reg);
-					fprintf(output, "_END_%d:\n", g_cnt++);
+					fprintf(output, "_END_unaryOp_%d:\n", g_cnt++);
 				}
 			}
 			return reg;
 		}
 	}
 }
+
 
 void genWrite(AST_NODE *node){
 	AST_NODE *paramListNode = node->rightSibling, *paramNode = paramListNode->child;
