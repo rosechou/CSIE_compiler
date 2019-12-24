@@ -252,14 +252,6 @@ void genForStmt(AST_NODE *forNode){
 	return;
 }
 
-void gen_data(int reg, int offset, char type){//TODO: what this?
-	//when type==FLOAT?
-	fprintf(output, ".data\n");
-	fprintf(output, "_const_%d: .word %d\n", g_cnt, offset);
-	gen_Alignment();
-	fprintf(output, ".text\n");
-	fprintf(output, "lw %c%d, _const_%d\n", type, reg, g_cnt++);
-}
 
 void genAssignStmt(AST_NODE *assignNode){
 	AST_NODE *idNode = assignNode->child, *rightNode = idNode->rightSibling;
@@ -274,7 +266,7 @@ void genAssignStmt(AST_NODE *assignNode){
 		if(entry->nestingLevel == 0)//global
 			fprintf(output, "la t%d,_%s\n", reg, node_id_name(idNode));
 		else{
-			gen_data(reg, entry->offset, 'w');
+			gen_offset_data(reg, entry->offset);
 			fprintf(output, "sub t%d, fp, t%d\n", reg, reg);
 		}
 		if(idNode->dataType == INT_TYPE){
@@ -287,8 +279,7 @@ void genAssignStmt(AST_NODE *assignNode){
 				fprintf(output, "sw t%d,0(t%d)\n", resultReg, reg);
 			}
 			
-		}
-		else{
+		}else{
 			if(rightNode->dataType == INT_TYPE){
 				int resultReg2 = get_reg();
 				free_reg(resultReg2);
@@ -308,23 +299,22 @@ void genAssignStmt(AST_NODE *assignNode){
 		for(AST_NODE *dimListNode = idNode->child ; dimListNode != NULL ; dimListNode = dimListNode->rightSibling){
 			int idxreg = genExprRelated(dimListNode);
 			int reg2 = get_reg();
-			gen_data(reg2, sym_typedesc(entry)->properties.arrayProperties.sizeInEachDimension[dim], 'x');
+			gen_offset_data(reg2, sym_typedesc(entry)->properties.arrayProperties.sizeInEachDimension[dim]);
 			fprintf(output, "mulw t%d, t%d, t%d\n", reg, reg, reg2);
 			fprintf(output, "slli t%d, t%d, 2\n", idxreg, idxreg);
 			fprintf(output, "add t%d, t%d, t%d\n", reg, reg, idxreg);
 			free_reg(idxreg);
 			free_reg(reg2);
-			++dim;
+			++dim;//multi-dimension part
 		}
 		int offset = entry->offset;
 		int reg2 = get_reg();
 
 		if(entry->nestingLevel == 0)//global
-			fprintf(output, "la t%d, _%s\n", reg2, node_id_name(idNode));
+			fprintf(output, "la t%d,_%s\n", reg2, node_id_name(idNode));
 		else{
-			fprintf(output, "add t%d, t%d, fp\n", reg, reg);
-			gen_data(reg2, entry->offset, 'x');
-			fprintf(output, "neg t%d, t%d\n", reg2, reg2);
+			gen_offset_data(reg2, entry->offset);
+			fprintf(output, "sub t%d, fp, t%d\n", reg2, reg2);
 		}
 		fprintf(output, "add t%d, t%d, t%d\n", reg, reg, reg2);
 		if(idNode->dataType == INT_TYPE){
@@ -447,8 +437,7 @@ int genExprRelated(AST_NODE *exprRelatedNode){//TODO: Support return float tmp r
 			if(exprRelatedNode->dataType == INT_TYPE){
 				reg = get_reg();
 				fprintf(output, "mv t%d,a0\n", reg);				
-			}
-			else if(exprRelatedNode->dataType == FLOAT_TYPE){
+			}else if(exprRelatedNode->dataType == FLOAT_TYPE){
 				reg = get_float_reg();
 				fprintf(output, "fmv.w.x ft%d,a0\n", reg-7);
 			}
@@ -466,43 +455,49 @@ int genExprRelated(AST_NODE *exprRelatedNode){//TODO: Support return float tmp r
 						fprintf(output, "flw ft%d,_%s\n", reg, exprRelatedNode->semantic_value.identifierSemanticValue.identifierName);
 					}
 				}else{
-					gen_data(reg, entry->offset, 'w');//TODO:
+					gen_offset_data(reg, entry->offset);//TODO:
 					fprintf(output, "sub t%d, fp, t%d\n", reg, reg);
-					if(exprRelatedNode->dataType == INT_TYPE)
+					if(exprRelatedNode->dataType == INT_TYPE){
 						fprintf(output, "lw t%d,0(t%d)\n", reg, reg);
-					else
-						fprintf(output, "lw t%d,0(t%d)\n", reg, reg);
+					}else{
+						free_reg(reg);
+						int reg2 = get_float_reg();						
+						fprintf(output, "flw ft%d,0(t%d)\n", reg2-7, reg);
+						return reg2;
+					}
 				}
-			}
-			else{
+			}else{//ARRAY_ID
 				exprRelatedNode->dataType = sym_typedesc(entry)->properties.arrayProperties.elementType;
-				int dim = 0;
-				fprintf(output, "addi t%d,t%d,0\n", reg);
+				int dim = 0; 
+				fprintf(output, "mv t%d,x0\n", reg); 
 				for(AST_NODE *dimListNode = exprRelatedNode->child ; dimListNode != NULL ; dimListNode = dimListNode->rightSibling){
 					int reg2 = get_reg();
-					gen_data(reg2, sym_typedesc(entry)->properties.arrayProperties.sizeInEachDimension[dim], 'x');
+					gen_offset_data(reg2, sym_typedesc(entry)->properties.arrayProperties.sizeInEachDimension[dim]);
 					fprintf(output, "mulw t%d, t%d, t%d\n", reg, reg, reg2);
 					free_reg(reg2);
 					reg2 = genExprRelated(dimListNode);
-					fprintf(output, "slli t%d, t%d, #2\n", reg2, reg2);
+					fprintf(output, "slli t%d, t%d, 2\n", reg2, reg2);
 					fprintf(output, "add t%d, t%d, t%d\n", reg, reg, reg2);
 					free_reg(reg2);
 					++dim;
 				}
 				int reg2 = get_reg();
-				if(entry->nestingLevel == 0)
+				if(entry->nestingLevel == 0){
 					fprintf(output, "la t%d, _%s\n", reg2, exprRelatedNode->semantic_value.identifierSemanticValue.identifierName);
-				else{
-					fprintf(output, "add t%d, t%d, t%d\n", reg, reg, 29);
-					gen_data(reg2, entry->offset, 'x');
-					fprintf(output, "neg t%d, t%d\n", reg2, reg2);
+				}else{
+					gen_offset_data(reg2, entry->offset);
+					fprintf(output, "sub t%d, fp, t%d\n", reg2, reg2);
 				}
 				free_reg(reg2);
 				fprintf(output, "add t%d, t%d, t%d\n", reg, reg, reg2);
-				if(exprRelatedNode->dataType == INT_TYPE)
+				if(exprRelatedNode->dataType == INT_TYPE){
 					fprintf(output, "lw t%d,0(t%d)\n", reg, reg);
-				else
-					fprintf(output, "lw t%d,0(t%d)\n", reg, reg);
+				}else{
+					free_reg(reg);
+					int reg2 = get_float_reg();						
+					fprintf(output, "flw ft%d,0(t%d)\n", reg2-7, reg);
+					return reg2;
+				}
 			}
 			break;
 		case CONST_VALUE_NODE:
@@ -517,12 +512,14 @@ int genExprRelated(AST_NODE *exprRelatedNode){//TODO: Support return float tmp r
 			}
 			else if(const_type(exprRelatedNode) == FLOATC){
 				exprRelatedNode->dataType = FLOAT_TYPE;
+				free_reg(reg);
+				reg = get_float_reg();
 				expr_const_eval(exprRelatedNode).fValue = const_fval(exprRelatedNode);
 				fprintf(output, ".data\n");
 				fprintf(output, "_float_const_%d: .float %lf\n", g_cnt, const_fval(exprRelatedNode));
 				gen_Alignment();
 				fprintf(output, ".text\n");
-				fprintf(output, "lw t%d, _float_const_%d\n", reg, g_cnt++);
+				fprintf(output, "flw ft%d, _float_const_%d\n", reg-7, g_cnt++);
 			}
 			else if(const_type(exprRelatedNode) == STRINGC){
 				exprRelatedNode->dataType = CONST_STRING_TYPE;
@@ -541,10 +538,10 @@ void genIntBinaryOp(AST_NODE *exprNode, int reg1, int reg2, char *op){//TODO: ge
 	exprNode->dataType = INT_TYPE;
 	fprintf(output, "cmp t%d, t%d\n", reg1, reg2);
 	fprintf(output, "%s _elseLabel_%d\n", op, g_cnt);
-	fprintf(output, "mv t%d,0\n", reg1);
+	fprintf(output, "mv t%d,x0\n", reg1);
 	fprintf(output, "j _END_%d\n", g_cnt);
 	fprintf(output, "_elseLabel_%d:\n", g_cnt);
-	fprintf(output, "mv t%d,1\n", reg1);
+	fprintf(output, "addi t%d,x0,1\n", reg1);
 	fprintf(output, "_END_%d:\n", g_cnt++);
 }
 
@@ -552,10 +549,10 @@ void genFloatBinaryOp(AST_NODE *exprNode, int reg1, int reg2, char *op){
 	exprNode->dataType = INT_TYPE;
 	fprintf(output, "fcmp t%d, t%d\n", reg1, reg2);
 	fprintf(output, "%s _elseLabel_%d\n", op, g_cnt);
-	fprintf(output, "mv t%d,0\n", reg1);
+	fprintf(output, "mv t%d,x0\n", reg1);
 	fprintf(output, "j _END_%d\n", g_cnt);
 	fprintf(output, "_elseLabel_%d:\n", g_cnt);
-	fprintf(output, "mv t%d,1\n", reg1);
+	fprintf(output, "addi t%d,x0,1\n", reg1);
 	fprintf(output, "_END_%d:\n", g_cnt++);
 }
 
@@ -572,32 +569,32 @@ int genExpr(AST_NODE *exprNode){
 				fprintf(output, ".text\n");
 				fprintf(output, "lw t%d, _int_const_%d\n", reg, g_cnt++);
 			}else{
+				free_reg(reg);
+				reg = get_float_reg();
 				fprintf(output, "_float_const_%d: .float %lf\n", g_cnt, expr_const_eval(exprNode).fValue);
 				gen_Alignment();
 				fprintf(output, ".text\n");
-				fprintf(output, "lw t%d, _float_const_%d\n", reg, g_cnt++);
+				fprintf(output, "flw ft%d, _float_const_%d\n", reg-7, g_cnt++);
 			}
 			return reg;
-		}
-		else{
+		}else{
 			int reg1 = genExprRelated(leftNode);
 			
 			if(leftNode->dataType == INT_TYPE){
 				free_reg(reg1);
 				fprintf(output, "sw t%d,0(sp)\n", reg1);
-			}
-			else{
+			}else{
 				free_reg(reg1);
 				fprintf(output, "fsw ft%d,0(sp)\n", reg1-7);
 			}
 			fprintf(output, "addi sp, sp, -8\n");
+
 			int reg2 = genExprRelated(rightNode);
 			fprintf(output, "addi sp, sp, 8\n");
 			if(leftNode->dataType == INT_TYPE){
 				reg1 = get_reg();
 				fprintf(output, "lw t%d,0(sp)\n", reg1);
-			}
-			else{
+			}else{
 				reg1 = get_float_reg();
 				fprintf(output, "flw ft%d,0(sp)\n", reg1-7);
 			}
@@ -639,10 +636,10 @@ int genExpr(AST_NODE *exprNode){
 						fprintf(output, "beq _elseLabel_%d\n", g_cnt);
 						fprintf(output, "cmp t%d, #0\n", reg2);
 						fprintf(output, "beq _elseLabel_%d\n", g_cnt);
-						fprintf(output, "mv t%d,1\n", reg1);
+						fprintf(output, "addi t%d,x0,1\n", reg1);
 						fprintf(output, "j _END_%d\n", g_cnt);
 						fprintf(output, "_elseLabel_%d:\n", g_cnt);
-						fprintf(output, "mv t%d,0\n", reg1);
+						fprintf(output, "mv t%d,x0\n", reg1);
 						fprintf(output, "_END_%d:\n", g_cnt++);
 						break;
 					case BINARY_OP_OR:;
@@ -650,22 +647,23 @@ int genExpr(AST_NODE *exprNode){
 						fprintf(output, "bne _elseLabel_%d\n", g_cnt);
 						fprintf(output, "cmp t%d, #0\n", reg2);
 						fprintf(output, "bne _elseLabel_%d\n", g_cnt);
-						fprintf(output, "mv t%d,0\n", reg1);
+						fprintf(output, "mv t%d,x0\n", reg1);
 						fprintf(output, "j _END_%d\n", g_cnt);
 						fprintf(output, "_elseLabel_%d:\n", g_cnt);
-						fprintf(output, "mv t%d,1\n", reg1);
+						fprintf(output, "addi t%d,x0,1\n", reg1);
 						fprintf(output, "_END_%d:\n", g_cnt++);
 						break;	
 				}
 				free_reg(reg2);
 				return reg1;
-			}
-			else{//float
+			}else{//float
 				exprNode->dataType = FLOAT_TYPE;
-				if(leftNode->dataType == INT_TYPE)
+				if(leftNode->dataType == INT_TYPE){
 					fprintf(output, "fcvt.s.w t%d, t%d\n", reg1, reg1);
-				if(rightNode->dataType == INT_TYPE)
-				fprintf(output, "fcvt.s.w t%d, t%d\n", reg2, reg2);
+				}
+				if(rightNode->dataType == INT_TYPE){
+					fprintf(output, "fcvt.s.w t%d, t%d\n", reg2, reg2);
+				}
 
 				switch(expr_bin_op(exprNode)){
 					case BINARY_OP_ADD:
@@ -704,10 +702,10 @@ int genExpr(AST_NODE *exprNode){
 						fprintf(output, "beq _elseLabel_%d\n", g_cnt);
 						fprintf(output, "cmp t%d, #0\n", reg2);
 						fprintf(output, "beq _elseLabel_%d\n", g_cnt);
-						fprintf(output, "mv t%d,1\n", reg1);
+						fprintf(output, "addi t%d,x0,1\n", reg1);
 						fprintf(output, "j _END_%d\n", g_cnt);
 						fprintf(output, "_elseLabel_%d:\n", g_cnt);
-						fprintf(output, "mv t%d,0\n", reg1);
+						fprintf(output, "mv t%d,x0\n", reg1);
 						fprintf(output, "_END_%d:\n", g_cnt);
 						++g_cnt;
 						break;
@@ -717,10 +715,10 @@ int genExpr(AST_NODE *exprNode){
 						fprintf(output, "bne _elseLabel_%d\n", g_cnt);
 						fprintf(output, "cmp t%d, #0\n", reg2);
 						fprintf(output, "bne _elseLabel_%d\n", g_cnt);
-						fprintf(output, "mv t%d,0\n", reg1);
+						fprintf(output, "mv t%d,x0\n", reg1);
 						fprintf(output, "j _END_%d\n", g_cnt);
 						fprintf(output, "_elseLabel_%d:\n", g_cnt);
-						fprintf(output, "mv t%d,1\n", reg1);
+						fprintf(output, "addi t%d,x0,1\n", reg1);
 						fprintf(output, "_END_%d:\n", g_cnt);
 						++g_cnt;
 						break;
@@ -735,24 +733,23 @@ int genExpr(AST_NODE *exprNode){
 		exprNode->dataType = operand->dataType;
 		if(is_const_eval(exprNode)){
 			fprintf(output, ".data\n");
-			if(exprNode->dataType == INT_TYPE)
+			if(exprNode->dataType == INT_TYPE){
 				fprintf(output, "_int_const_%d: .word %d\n", g_cnt, expr_const_eval(exprNode).iValue);
-			else
+			}else{
 				fprintf(output, "_float_const_%d: .float %lf\n", g_cnt, expr_const_eval(exprNode).fValue);
+			}
 			gen_Alignment();
 			fprintf(output, ".text\n");
 			int reg;
 			if(exprNode->dataType == INT_TYPE){
 				reg = get_reg();
 				fprintf(output, "lw t%d, _int_const_%d\n", reg, g_cnt++);
-			}
-			else{
+			}else{
 				reg = get_float_reg();
 				fprintf(output, "flw ft%d, _float_const_%d\n", reg-7, g_cnt++);
 			}
 			return reg;
-		}
-		else{
+		}else{
 			int reg = genExprRelated(operand);
 			if(operand->dataType == INT_TYPE){
 				if(expr_uni_op(exprNode) == UNARY_OP_NEGATIVE)
@@ -760,10 +757,10 @@ int genExpr(AST_NODE *exprNode){
 				else if(expr_uni_op(exprNode) == UNARY_OP_LOGICAL_NEGATION){
 					fprintf(output, "cmp t%d, #0\n", reg);
 					fprintf(output, "beq _elseLabel_%d\n", g_cnt);
-					fprintf(output, "mv t%d,0\n", reg);
+					fprintf(output, "mv t%d,x0\n", reg);
 					fprintf(output, "j _END_%d\n", g_cnt);
 					fprintf(output, "_elseLabel_%d:\n", g_cnt);
-					fprintf(output, "mv t%d,1\n", reg);
+					fprintf(output, "addi t%d,x0,1\n", reg);
 					fprintf(output, "_END_%d:\n", g_cnt++);
 				}
 			}else{
@@ -774,10 +771,10 @@ int genExpr(AST_NODE *exprNode){
 					fprintf(output, "fcvt.w.s t%d, t%d\n", reg, reg);
 					fprintf(output, "cmp t%d, #0\n", reg);
 					fprintf(output, "beq _elseLabel_%d\n", g_cnt);
-					fprintf(output, "mv t%d,0\n", reg);
+					fprintf(output, "mv t%d,x0\n", reg);
 					fprintf(output, "j _END_%d\n", g_cnt);
 					fprintf(output, "_elseLabel_%d:\n", g_cnt);
-					fprintf(output, "mv t%d,1\n", reg);
+					fprintf(output, "addi t%d,x0,1\n", reg);
 					fprintf(output, "_END_%d:\n", g_cnt++);
 				}
 			}
@@ -854,4 +851,14 @@ int get_float_reg(){
 
 void gen_Alignment(){
 	fprintf(output, ".align 3\n");
+}
+
+
+void gen_offset_data(int reg, int offset){//TODO: what this?
+	fprintf(output, ".data\n");
+	fprintf(output, "_const_offset_%d: .word %d\n", g_cnt, offset);
+	gen_Alignment();
+	fprintf(output, ".text\n");
+	fprintf(output, "lw t%d, _const_offset_%d\n", reg, g_cnt++);
+	
 }

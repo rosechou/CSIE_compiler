@@ -30,7 +30,7 @@ int get_reg();
 void free_reg(int reg);
 int get_float_reg();
 void gen_Alignment();
-void gen_data(int reg, int offset, char type);
+void gen_offset_data(int reg, int offset);
 void codegen(AST_NODE *root);
 void genProgram(AST_NODE *root);
 void genGlobalVarDecl(AST_NODE *varDeclListNode);
