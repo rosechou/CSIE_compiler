@@ -534,7 +534,7 @@ int genExprRelated(AST_NODE *exprRelatedNode){//TODO: Support return float tmp r
 
 void genIntBinaryOp(AST_NODE *exprNode, int reg1, int reg2, char *op){//BEQ/BNE/BLT/BGE
 	exprNode->dataType = INT_TYPE;
-	fprintf(output, "%s t%d, t%d 12\n", op, reg1, reg2);//_binaryOpLabel_%d
+	fprintf(output, "%s t%d, t%d, 12\n", op, reg1, reg2);//_binaryOpLabel_%d
 	fprintf(output, "mv t%d,x0\n", reg1);
 	fprintf(output, "j _END_binaryOp_%d\n", g_cnt);
 	fprintf(output, "_binaryOpLabel_%d:\n", g_cnt);
