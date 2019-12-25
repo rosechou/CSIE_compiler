@@ -467,7 +467,7 @@ int genExprRelated(AST_NODE *exprRelatedNode){//TODO: Support return float tmp r
 			}else{//ARRAY_ID
 				exprRelatedNode->dataType = sym_typedesc(entry)->properties.arrayProperties.elementType;
 				int dim = 0; 
-				fprintf(output, "mv t%d,x0\n", reg); 
+				fprintf(output, "addi t%d,x0,0\n", reg); 
 				for(AST_NODE *dimListNode = exprRelatedNode->child ; dimListNode != NULL ; dimListNode = dimListNode->rightSibling){
 					int reg2 = get_reg();
 					gen_offset_data(reg2, sym_typedesc(entry)->properties.arrayProperties.sizeInEachDimension[dim]);
@@ -534,8 +534,8 @@ int genExprRelated(AST_NODE *exprRelatedNode){//TODO: Support return float tmp r
 
 void genIntBinaryOp(AST_NODE *exprNode, int reg1, int reg2, char *op){//BEQ/BNE/BLT/BGE
 	exprNode->dataType = INT_TYPE;
-	fprintf(output, "%s t%d, t%d, 12\n", op, reg1, reg2);//_binaryOpLabel_%d
-	fprintf(output, "mv t%d,x0\n", reg1);
+	fprintf(output, "%s t%d, t%d, 12\n", op, reg1, reg2);//_binaryOpLabel_%d 
+	fprintf(output, "addi t%d,x0,0\n", reg1);
 	fprintf(output, "j _END_binaryOp_%d\n", g_cnt);
 	fprintf(output, "_binaryOpLabel_%d:\n", g_cnt);
 	fprintf(output, "addi t%d,x0,1\n", reg1);
@@ -729,7 +729,7 @@ int genExpr(AST_NODE *exprNode){
 					fprintf(output, "subw t%d,x0,t%d", reg, reg); //neg = sub rd, x0, rs
 				}else if(expr_uni_op(exprNode) == UNARY_OP_LOGICAL_NEGATION){
 					fprintf(output, "beqz t%d,_unaryOpLabel_%d\n", reg, g_cnt);
-					fprintf(output, "mv t%d,x0\n", reg);
+					fprintf(output, "addi t%d,x0,1\n", reg);
 					fprintf(output, "j _END_unaryOp_%d\n", g_cnt);
 					fprintf(output, "_unaryOpLabel_%d:\n", g_cnt);
 					fprintf(output, "addi t%d,x0,1\n", reg);
@@ -745,7 +745,7 @@ int genExpr(AST_NODE *exprNode){
 					fprintf(output, "fcvt.w.s t%d, t%d\n", tmp, reg-7);
 					reg = tmp;
 					fprintf(output, "beqz t%d,_unaryOpLabel_%d\n", reg, g_cnt);
-					fprintf(output, "mv t%d,x0\n", reg);
+					fprintf(output, "addi t%d,x0,1\n", reg);
 					fprintf(output, "j _END_unaryOp_%d\n", g_cnt);
 					fprintf(output, "_unaryOpLabel_%d:\n", g_cnt);
 					fprintf(output, "addi t%d,x0,1\n", reg);
