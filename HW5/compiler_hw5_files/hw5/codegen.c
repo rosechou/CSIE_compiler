@@ -537,7 +537,7 @@ void genIntBinaryOp(AST_NODE *exprNode, int reg1, int reg2, char *op){//BEQ/BNE/
 	exprNode->dataType = INT_TYPE;
 	fprintf(output, "%s t%d, t%d, 12\n", op, reg1, reg2);//_binaryOpLabel_%d 
 	//fprintf(output, "addi t%d,x0,0\n", reg1);//why gen "j 0xc"???
-	fprintf(output, "sub t%d,t%d,t%d,\n", reg, reg, reg);
+	fprintf(output, "sub t%d,t%d,t%d,\n", reg1, reg1, reg1);
 	fprintf(output, "j _END_binaryOp_%d\n", g_cnt);
 	fprintf(output, "_binaryOpLabel_%d:\n", g_cnt);
 	fprintf(output, "addi t%d,x0,1\n", reg1);
